@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Saza's Snake Game</title>
+  <style>
+    :root { color-scheme: dark; --bg:#080d19; --panel:#111a2b; --line:#26344d; --orange:#ff9b42; --cream:#f5ead7; --muted:#9ba9bf; }
+    * { box-sizing: border-box; }
+    body { margin:0; min-height:100vh; display:grid; place-items:center; padding:24px; background:radial-gradient(ellipse at top,#17243b 0%,var(--bg) 60%); color:var(--cream); font-family:Inter,system-ui,Segoe UI,sans-serif; }
+    .wrap { width:min(100%,560px); text-align:center; }
+    .eyebrow { color:var(--orange); font-size:12px; font-weight:800; letter-spacing:3px; text-transform:uppercase; }
+    h1 { margin:8px 0 6px; font-size:clamp(30px,7vw,46px); letter-spacing:-1.5px; }
+    .sub { margin:0 0 22px; color:var(--muted); }
+    .panel { padding:18px; border:1px solid var(--line); border-radius:22px; background:rgba(17,26,43,.94); box-shadow:0 24px 70px #0008; }
+    .scores { display:flex; justify-content:space-between; margin-bottom:14px; gap:12px; }
+    .score { flex:1; padding:10px; background:#0a1221; border:1px solid var(--line); border-radius:13px; }
+    .score small { display:block; color:var(--muted); font-size:11px; letter-spacing:1.5px; text-transform:uppercase; }
+    .score strong { display:block; color:var(--orange); font-size:24px; margin-top:2px; }
+    canvas { display:block; width:100%; max-width:480px; aspect-ratio:1; margin:auto; border-radius:14px; background:#080f1d; border:1px solid #293953; image-rendering:pixelated; }
+    .actions { display:flex; justify-content:center; gap:10px; margin-top:15px; flex-wrap:wrap; }
+    button { border:1px solid #35445e; border-radius:12px; padding:11px 18px; color:var(--cream); background:#1a2941; font-weight:750; cursor:pointer; }
+    button.primary { color:#17100a; background:var(--orange); border-color:var(--orange); }
+    button:active { transform:translateY(1px); }
+    .hint { margin:15px 0 0; color:var(--muted); font-size:13px; line-height:1.7; }
+    .pad { display:grid; grid-template-columns:repeat(3,48px); grid-template-rows:repeat(2,42px); justify-content:center; gap:6px; margin-top:14px; }
+    .pad button { padding:4px; font-size:18px; }
+    .pad .up { grid-column:2; }
+    .pad .left { grid-column:1; grid-row:2; }
+    .pad .down { grid-column:2; grid-row:2; }
+    .pad .right { grid-column:3; grid-row:2; }
+    @media (min-width:700px) { .pad { display:none; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="eyebrow">Saza's mini arcade</div>
+    <h1>Snake Game</h1>
+    <p class="sub">Collect the orange dots. Don't hit the walls or yourself!</p>
+    <section class="panel">
+      <div class="scores">
+        <div class="score"><small>Score</small><strong id="score">0</strong></div>
+        <div class="score"><small>Best</small><strong id="best">0</strong></div>
+      </div>
+      <canvas id="game" width="480" height="480" aria-label="Snake game board"></canvas>
+      <div class="actions">
+        <button class="primary" id="start">Start / Restart</button>
+        <button id="pause">Pause</button>
+      </div>
+      <div class="pad" aria-label="Touch controls">
+        <button class="up" data-dir="up">▲</button>
+        <button class="left" data-dir="left">◀</button>
+        <button class="down" data-dir="down">▼</button>
+        <button class="right" data-dir="right">▶</button>
+      </div>
+      <p class="hint">Keyboard: Arrow keys or WASD · Space: pause<br>Mobile: swipe on the board or use the direction buttons.</p>
+    </section>
+  </main>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const bestEl = document.getElementById('best');
+  const size = 24, cells = canvas.width / size;
+  let snake, food, dir, nextDir, score, timer, running = false, over = false;
+  let best = Number(localStorage.getItem('sazaSnakeBest') || 0);
+  bestEl.textContent = best;
+
+  function randomFood() {
+    let p;
+    do { p = {x:Math.floor(Math.random()*cells), y:Math.floor(Math.random()*cells)}; }
+    while (snake.some(s => s.x===p.x && s.y===p.y));
+    return p;
+  }
+  function reset() {
+    clearInterval(timer);
+    snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}];
+    dir = {x:1,y:0}; nextDir = {...dir}; score = 0;
+    scoreEl.textContent = score; food = randomFood();
+    running = true; over = false; draw();
+    timer = setInterval(tick, 115);
+  }
+  function setDirection(name) {
+    const dirs = {up:{x:0,y:-1},down:{x:0,y:1},left:{x:-1,y:0},right:{x:1,y:0}};
+    const d = dirs[name];
+    if (d && !(d.x === -dir.x && d.y === -dir.y)) nextDir = d;
+  }
+  function tick() {
+    dir = nextDir;
+    const head = {x:snake[0].x+dir.x, y:snake[0].y+dir.y};
+    const eating = head.x===food.x && head.y===food.y;
+    const body = eating ? snake : snake.slice(0,-1);
+    if (head.x<0 || head.y<0 || head.x>=cells || head.y>=cells || body.some(s=>s.x===head.x&&s.y===head.y)) {
+      running = false; over = true; clearInterval(timer); draw(); return;
+    }
+    snake.unshift(head);
+    if (eating) {
+      score += 10; scoreEl.textContent = score;
+      if (score > best) { best=score; bestEl.textContent=best; localStorage.setItem('sazaSnakeBest',best); }
+      food = randomFood();
+    } else snake.pop();
+    draw();
+  }
+  function roundedRect(x,y,w,h,r) {
+    ctx.beginPath(); ctx.roundRect(x,y,w,h,r); ctx.fill();
+  }
+  function draw() {
+    ctx.fillStyle='#080f1d'; ctx.fillRect(0,0,480,480);
+    ctx.strokeStyle='rgba(130,155,190,.07)'; ctx.lineWidth=1;
+    for(let i=0;i<=cells;i++){ctx.beginPath();ctx.moveTo(i*size,0);ctx.lineTo(i*size,480);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i*size);ctx.lineTo(480,i*size);ctx.stroke();}
+    ctx.fillStyle='#ff9b42'; ctx.shadowColor='#ff9b42'; ctx.shadowBlur=18;
+    roundedRect(food.x*size+5,food.y*size+5,size-10,size-10,7); ctx.shadowBlur=0;
+    snake.forEach((s,i)=>{ctx.fillStyle=i===0?'#ffe0b8':'#f28c38';ctx.shadowColor=i===0?'#ffb66e':'transparent';ctx.shadowBlur=i===0?12:0;roundedRect(s.x*size+2,s.y*size+2,size-4,size-4, i===0?7:5);});
+    ctx.shadowBlur=0;
+    if (!running) {
+      ctx.fillStyle='rgba(3,8,17,.67)'; ctx.fillRect(0,0,480,480);
+      ctx.textAlign='center'; ctx.fillStyle='#f5ead7'; ctx.font='800 30px system-ui';
+      ctx.fillText(over?'Game Over':'Ready?',240,220);
+      ctx.fillStyle='#aab8ce'; ctx.font='16px system-ui';
+      ctx.fillText(over?'Press Start / Restart to play again':'Press Start to begin',240,254);
+    }
+  }
+  document.getElementById('start').addEventListener('click',reset);
+  document.getElementById('pause').addEventListener('click',()=>{
+    if (!running && !over) return;
+    if (running) { clearInterval(timer); running=false; document.getElementById('pause').textContent='Resume'; draw(); }
+    else if (!over) { running=true; document.getElementById('pause').textContent='Pause'; timer=setInterval(tick,115); draw(); }
+  });
+  document.addEventListener('keydown',e=>{
+    const map={ArrowUp:'up',w:'up',ArrowDown:'down',s:'down',ArrowLeft:'left',a:'left',ArrowRight:'right',d:'right'};
+    if(map[e.key]) {e.preventDefault();setDirection(map[e.key]);}
+    if(e.code==='Space'){e.preventDefault();document.getElementById('pause').click();}
+  });
+  document.querySelectorAll('[data-dir]').forEach(b=>b.addEventListener('click',()=>setDirection(b.dataset.dir)));
+  let touchX=0,touchY=0;
+  canvas.addEventListener('touchstart',e=>{touchX=e.changedTouches[0].clientX;touchY=e.changedTouches[0].clientY;},{passive:true});
+  canvas.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-touchX,dy=e.changedTouches[0].clientY-touchY;
+    if(Math.max(Math.abs(dx),Math.abs(dy))>18)setDirection(Math.abs(dx)>Math.abs(dy)?(dx>0?'right':'left'):(dy>0?'down':'up'));
+  },{passive:true});
+  snake=[{x:10,y:10},{x:9,y:10},{x:8,y:10}];dir={x:1,y:0};nextDir={...dir};score=0;food={x:15,y:10};draw();
+})();
+</script>
+</body>
+</html>
