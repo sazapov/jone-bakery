@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "959992228033",
+    "project_id": "projekmobilejone",
+    "storage_bucket": "projekmobilejone.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:959992228033:android:e14957172f1272a537cc40",
+        "android_client_info": {
+          "package_name": "com.example.gma121"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUmjcVmIqAcTcoDAKS0zrgREzcGGPeZGI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:959992228033:android:59a7b438b18e781d37cc40",
+        "android_client_info": {
+          "package_name": "com.example.kasir_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCUmjcVmIqAcTcoDAKS0zrgREzcGGPeZGI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
